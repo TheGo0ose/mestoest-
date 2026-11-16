@@ -2,8 +2,7 @@ package com.tablemint.booking.controller;
 
 import com.tablemint.booking.model.BookingSource;
 import com.tablemint.booking.service.BookingService;
-import com.tablemint.restaurant.model.DiningTable;
-import com.tablemint.restaurant.repository.DiningTableRepository;
+import com.tablemint.booking.service.BookingService.BookingDto;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -18,15 +17,13 @@ import java.time.Instant;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/guest")
+@RequestMapping({"/guest", "/api/v1/guest"})
 public class GuestBookingController {
 
     private final BookingService bookingService;
-    private final DiningTableRepository tableRepository;
 
-    public GuestBookingController(BookingService bookingService, DiningTableRepository tableRepository) {
+    public GuestBookingController(BookingService bookingService) {
         this.bookingService = bookingService;
-        this.tableRepository = tableRepository;
     }
 
     public record CreateGuestBookingRequest(
@@ -42,7 +39,7 @@ public class GuestBookingController {
 
     @PostMapping("/bookings")
     @PreAuthorize("hasRole('BOT')")
-    public ResponseEntity<BookingController.BookingDto> createGuestBooking(
+    public ResponseEntity<BookingDto> createGuestBooking(
             @RequestHeader("Idempotency-Key") String idempotencyKey,
             @Valid @RequestBody CreateGuestBookingRequest req
     ) {
@@ -61,9 +58,6 @@ public class GuestBookingController {
         );
 
         BookingService.BookingResult result = bookingService.createBooking(cmd);
-        String label = tableRepository.findById(result.booking().getTableId())
-                .map(DiningTable::getLabel)
-                .orElse("Table");
 
         HttpHeaders headers = new HttpHeaders();
         if (result.isReplayed()) {
@@ -72,6 +66,6 @@ public class GuestBookingController {
 
         return ResponseEntity.status(HttpStatus.CREATED)
                 .headers(headers)
-                .body(BookingController.BookingDto.fromEntity(result.booking(), label));
+                .body(result.booking());
     }
 }

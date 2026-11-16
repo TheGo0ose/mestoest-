@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.*;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 
@@ -43,6 +44,10 @@ public class AvailabilityService {
 
     @Transactional(readOnly = true)
     public AvailabilityResponse getAvailability(UUID restaurantId, LocalDate date, int partySize) {
+        if (partySize < 1) {
+            throw new DomainException(ErrorCode.VALIDATION_FAILED);
+        }
+
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
                 .orElseThrow(() -> new DomainException(ErrorCode.NOT_FOUND));
 
@@ -87,14 +92,14 @@ public class AvailabilityService {
         LocalTime current = openTime;
 
         while (!current.isAfter(lastSlotStart)) {
-            ZonedDateTime slotZoned = ZonedDateTime.of(date, current, zone);
+            ZonedDateTime slotZoned = ZonedDateTime.of(date, current, zone).truncatedTo(ChronoUnit.SECONDS);
             Instant slotInstant = slotZoned.toInstant();
 
             if (!slotInstant.isBefore(minLeadInstant)) {
                 Instant slotEndInstant = slotInstant.plus(sittingMinutes, ChronoUnit.MINUTES);
                 Optional<UUID> freeTable = bookingRepository.findAvailableTable(restaurantId, partySize, slotInstant, slotEndInstant);
                 if (freeTable.isPresent()) {
-                    availableSlots.add(slotZoned.toString());
+                    availableSlots.add(slotZoned.toOffsetDateTime().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME));
                 }
             }
 

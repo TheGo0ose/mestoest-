@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TableMint — Панель демонстрации и аутентификации</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card: #1e293b;
+            --border: #334155;
+            --text: #f8fafc;
+            --muted: #94a3b8;
+            --primary: #10b981;
+            --primary-hover: #059669;
+            --danger: #ef4444;
+        }
+        * { box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
+        body {
+            margin: 0; padding: 24px;
+            background: var(--bg); color: var(--text);
+            max-width: 1180px; margin-inline: auto;
+        }
+        h1, h2, h3 { margin-top: 0; }
+        .header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding-bottom: 16px; border-bottom: 1px solid var(--border); margin-bottom: 24px;
+        }
+        .badge {
+            background: #065f46; color: #6ee7b7; padding: 6px 12px;
+            border-radius: 999px; font-size: 13px; font-weight: 600;
+        }
+        .grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 20px;
+        }
+        .card {
+            background: var(--card); border: 1px solid var(--border);
+            border-radius: 12px; padding: 20px;
+        }
+        label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; margin-top: 12px; }
+        input, select {
+            width: 100%; padding: 10px 12px; border-radius: 8px;
+            border: 1px solid var(--border); background: #0f172a; color: var(--text);
+        }
+        button {
+            margin-top: 10px; padding: 10px 14px; border-radius: 8px; border: none;
+            background: var(--primary); color: #fff; font-weight: 600; cursor: pointer;
+            transition: background 0.15s;
+        }
+        button:hover { background: var(--primary-hover); }
+        button.secondary { background: #3b82f6; }
+        button.purple { background: #8b5cf6; }
+        button.danger { background: #ef4444; }
+        .quick-accounts { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+        .quick-accounts button { margin-top: 0; padding: 6px 10px; font-size: 12px; background: #334155; }
+        pre {
+            background: #020617; border: 1px solid var(--border); border-radius: 8px;
+            padding: 14px; overflow-x: auto; font-size: 13px; color: #a7f3d0;
+            max-height: 400px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <h1>🍽️ TableMint — Демонстрационная панель API (v1.1)</h1>
+            <div style="color: var(--muted); font-size: 14px;">Единая страница аутентификации, каталога, бронирования, управления рестораном и аналитики</div>
+        </div>
+        <div id="userStatus" class="badge">Не авторизован</div>
+    </div>
+
+    <div class="grid">
+        <!-- Блок 1: Вход и сессия -->
+        <div class="card">
+            <h2>🔐 1. Аутентификация (/api/v1/auth)</h2>
+            <div style="font-size: 12px; color: var(--muted); margin-bottom: 6px;">Быстрый выбор тестового аккаунта:</div>
+            <div class="quick-accounts">
+                <button type="button" onclick="fillAuth('customer1@tablemint.local')">Клиент (Customer)</button>
+                <button type="button" onclick="fillAuth('owner1@tablemint.local')">Владелец (Owner)</button>
+                <button type="button" onclick="fillAuth('moderator@tablemint.local')">Модератор</button>
+            </div>
+            <label>Email</label>
+            <input id="loginEmail" type="email" value="customer1@tablemint.local">
+            <label>Пароль</label>
+            <input id="loginPassword" type="password" value="Password123!">
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                <button onclick="login()">Войти</button>
+                <button class="secondary" onclick="checkMe()">Профиль (/auth/me)</button>
+                <button class="danger" onclick="logout()">Выйти</button>
+            </div>
+        </div>
+
+        <!-- Блок 2: Каталог и Меню -->
+        <div class="card">
+            <h2>📖 2. Каталог и Меню (Публичные)</h2>
+            <p style="font-size: 13px; color: var(--muted); margin-top: 0;">Тестовый ресторан: <b>TableMint Bistro Bishkek</b></p>
+            <div style="display:flex; flex-direction:column; gap:4px;">
+                <button class="secondary" onclick="apiGet('/api/v1/restaurants')">Список ресторанов (/restaurants)</button>
+                <button class="secondary" onclick="apiGet('/api/v1/restaurants/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa')">Карточка ресторана и часы работы</button>
+                <button class="secondary" onclick="apiGet('/api/v1/restaurants/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/menu')">Публичное меню с ценами (/menu)</button>
+                <button class="secondary" onclick="apiGet('/api/v1/restaurants/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/availability?date=2026-11-20&partySize=4')">Свободные слоты на 4 гостей</button>
+            </div>
+        </div>
+
+        <!-- Блок 3: Бронирование столика -->
+        <div class="card">
+            <h2>📅 3. Бронирование столика (Customer)</h2>
+            <label>Время начала (UTC / ISO-8601)</label>
+            <input id="bookTime" type="text" value="2026-11-20T13:00:00Z">
+            <label>Количество гостей (partySize)</label>
+            <input id="bookParty" type="number" value="4" min="1" max="10">
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                <button onclick="createBooking()">Забронировать столик</button>
+                <button class="secondary" onclick="apiGet('/api/v1/me/bookings')">Мои бронирования (/me/bookings)</button>
+            </div>
+        </div>
+
+        <!-- Блок 4: Кабинет Владельца и Модератора -->
+        <div class="card">
+            <h2>📊 4. Админ-панель и Аналитика (Owner / Moderator)</h2>
+            <div style="display:flex; flex-direction:column; gap:4px;">
+                <button class="purple" onclick="apiGet('/api/v1/admin/restaurants')">Мои управляемые рестораны (/admin/restaurants)</button>
+                <button class="purple" onclick="apiGet('/api/v1/admin/restaurants/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/tables')">Столики ресторана (/tables)</button>
+                <button class="purple" onclick="apiGet('/api/v1/admin/restaurants/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/menu')">Управление меню (/admin/.../menu)</button>
+                <button class="purple" onclick="apiGet('/api/v1/admin/stats/bookings?restaurantId=aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa&fromDate=2026-11-01&toDate=2026-11-30')">Статистика бронирований (StatsDashboard)</button>
+                <button class="purple" onclick="apiGet('/api/v1/admin/contact-requests')">Заявки на обратную связь (/admin/contact-requests)</button>
+                <button class="purple" onclick="apiGet('/api/v1/admin/users')">Список пользователей (только MODERATOR)</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="card" style="margin-top: 20px;">
+        <h3>📡 Ответ сервера API (JSON / RFC 9457 Problem Details):</h3>
+        <pre id="output">Нажмите любую кнопку выше для выполнения запроса...</pre>
+    </div>
+
+    <script>
+        function getCookie(name) {
+            const m = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+            return m ? m.pop() : '';
+        }
+
+        function fillAuth(email) {
+            document.getElementById('loginEmail').value = email;
+            document.getElementById('loginPassword').value = 'Password123!';
+        }
+
+        function showOutput(status, data) {
+            document.getElementById('output').textContent = `HTTP ${status}\n\n` + JSON.stringify(data, null, 2);
+        }
+
+        async function login() {
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            const res = await fetch('/api/v1/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
+            });
+            const data = await res.json().catch(() => ({}));
+            showOutput(res.status, data);
+            if (res.ok) {
+                document.getElementById('userStatus').textContent = `Вы вошли: ${data.email} (${data.role})`;
+            }
+        }
+
+        async function checkMe() {
+            const res = await fetch('/api/v1/auth/me');
+            const data = await res.json().catch(() => ({}));
+            showOutput(res.status, data);
+            if (res.ok) {
+                document.getElementById('userStatus').textContent = `Вы вошли: ${data.email} (${data.role})`;
+            } else {
+                document.getElementById('userStatus').textContent = 'Не авторизован';
+            }
+        }
+
+        async function logout() {
+            const csrf = getCookie('XSRF-TOKEN');
+            const headers = {};
+            if (csrf) headers['X-XSRF-TOKEN'] = csrf;
+            const res = await fetch('/api/v1/auth/logout', { method: 'POST', headers });
+            showOutput(res.status, { message: 'Сессия завершена' });
+            document.getElementById('userStatus').textContent = 'Не авторизован';
+        }
+
+        async function apiGet(url) {
+            const res = await fetch(url);
+            const data = await res.json().catch(() => ({}));
+            showOutput(res.status, data);
+        }
+
+        async function createBooking() {
+            const startsAt = document.getElementById('bookTime').value;
+            const partySize = parseInt(document.getElementById('bookParty').value, 10);
+            const idemKey = crypto.randomUUID();
+            const csrf = getCookie('XSRF-TOKEN');
+            const headers = {
+                'Content-Type': 'application/json',
+                'Idempotency-Key': idemKey
+            };
+            if (csrf) headers['X-XSRF-TOKEN'] = csrf;
+
+            const res = await fetch('/api/v1/bookings', {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({
+                    restaurantId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+                    startsAt,
+                    partySize,
+                    consentAccepted: true,
+                    consentVersion: '1.0'
+                })
+            });
+            const data = await res.json().catch(() => ({}));
+            showOutput(res.status, data);
+        }
+
+        checkMe();
+    </script>
+</body>
+</html>

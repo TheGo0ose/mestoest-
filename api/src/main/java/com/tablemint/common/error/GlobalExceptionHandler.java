@@ -3,17 +3,21 @@ package com.tablemint.common.error;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingRequestHeaderException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
-import java.net.URI;
 import java.sql.SQLException;
 import java.util.*;
 
@@ -38,8 +42,14 @@ public class GlobalExceptionHandler {
                 locale
         );
 
+        HttpHeaders headers = new HttpHeaders();
+        if (code == ErrorCode.RATE_LIMITED && ex.getMessageArgs() != null && ex.getMessageArgs().length > 0) {
+            headers.add(HttpHeaders.RETRY_AFTER, String.valueOf(ex.getMessageArgs()[0]));
+        }
+
         Map<String, Object> body = buildProblemBody(code.getHttpStatus(), code.name(), title, null, null);
         return ResponseEntity.status(code.getHttpStatus())
+                .headers(headers)
                 .contentType(MediaType.parseMediaType("application/problem+json"))
                 .body(body);
     }
@@ -65,6 +75,27 @@ public class GlobalExceptionHandler {
         }
 
         Map<String, Object> body = buildProblemBody(code.getHttpStatus(), code.name(), title, null, fieldErrors);
+        return ResponseEntity.status(code.getHttpStatus())
+                .contentType(MediaType.parseMediaType("application/problem+json"))
+                .body(body);
+    }
+
+    @ExceptionHandler({
+            MissingRequestHeaderException.class,
+            MissingServletRequestParameterException.class,
+            MethodArgumentTypeMismatchException.class,
+            HttpMessageNotReadableException.class
+    })
+    public ResponseEntity<Map<String, Object>> handleBadRequestExceptions(Exception ex) {
+        Locale locale = resolveLocale();
+        ErrorCode code = ErrorCode.VALIDATION_FAILED;
+        String title = messageSource.getMessage(
+                code.name() + ".title",
+                null,
+                "Please check the highlighted fields.",
+                locale
+        );
+        Map<String, Object> body = buildProblemBody(code.getHttpStatus(), code.name(), title, ex.getMessage(), null);
         return ResponseEntity.status(code.getHttpStatus())
                 .contentType(MediaType.parseMediaType("application/problem+json"))
                 .body(body);

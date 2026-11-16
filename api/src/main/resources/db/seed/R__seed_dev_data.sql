@@ -6,10 +6,10 @@
 
 INSERT INTO app_user (id, email, password_hash, display_name, phone, role, locale, status, must_change_password, consent_version, consent_at)
 VALUES 
-('11111111-1111-1111-1111-111111111111', 'moderator@tablemint.local', '$2a$10$7zBvyjK7lZ3sYg6Xg3uPqu/dK3f0wYvQW9t9Q1E0F5gYv9mR.0u2m', 'System Moderator', '+996555000001', 'MODERATOR', 'ru', 'ACTIVE', false, '1.0', now()),
-('22222222-2222-2222-2222-222222222222', 'owner1@tablemint.local', '$2a$10$7zBvyjK7lZ3sYg6Xg3uPqu/dK3f0wYvQW9t9Q1E0F5gYv9mR.0u2m', 'Restaurant Owner', '+996555000002', 'OWNER', 'ru', 'ACTIVE', false, '1.0', now()),
-('33333333-3333-3333-3333-333333333333', 'customer1@tablemint.local', '$2a$10$7zBvyjK7lZ3sYg6Xg3uPqu/dK3f0wYvQW9t9Q1E0F5gYv9mR.0u2m', 'Regular Customer', '+996555000003', 'CUSTOMER', 'ru', 'ACTIVE', false, '1.0', now())
-ON CONFLICT (lower(email)) DO NOTHING;
+('11111111-1111-1111-1111-111111111111', 'moderator@tablemint.local', crypt('Password123!', gen_salt('bf', 10)), 'System Moderator', '+996555000001', 'MODERATOR', 'ru', 'ACTIVE', false, '1.0', now()),
+('22222222-2222-2222-2222-222222222222', 'owner1@tablemint.local', crypt('Password123!', gen_salt('bf', 10)), 'Restaurant Owner', '+996555000002', 'OWNER', 'ru', 'ACTIVE', false, '1.0', now()),
+('33333333-3333-3333-3333-333333333333', 'customer1@tablemint.local', crypt('Password123!', gen_salt('bf', 10)), 'Regular Customer', '+996555000003', 'CUSTOMER', 'ru', 'ACTIVE', false, '1.0', now())
+ON CONFLICT (lower(email)) DO UPDATE SET password_hash = EXCLUDED.password_hash;
 
 -- Seed Restaurant
 INSERT INTO restaurant (id, owner_id, name, description, address, phone, time_zone, status, sitting_minutes, slot_minutes, min_lead_minutes, max_advance_days)
