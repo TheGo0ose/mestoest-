@@ -1,0 +1,9 @@
+@import 'tailwindcss';
+
+@theme inline {
+  --color-brand-soft: #fde7e0;
+}
+
+body {
+  font-family: Arial, Helvetica, sans-serif;
+}
